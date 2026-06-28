@@ -160,7 +160,7 @@ const submitTest = () => {
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">Test Kodi</label>
-          <input type="password" v-model="inputCode" @keyup.enter="startTest" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-colors" placeholder="Kodni kiriting (1511)">
+          <input type="password" v-model="inputCode" @keyup.enter="startTest" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-colors" placeholder="Kodni kiriting">
         </div>
         <p v-if="accessError" class="text-red-500 text-sm mt-2 font-medium">{{ accessError }}</p>
       </div>
