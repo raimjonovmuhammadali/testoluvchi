@@ -11,6 +11,8 @@ if (!test) {
   throw createError({ statusCode: 404, statusMessage: 'Test not found' })
 }
 
+const STORAGE_KEY = computed(() => `test_progress_${testId}`)
+
 // Access logic
 const hasAccess = ref(false)
 const inputCode = ref('')
@@ -18,6 +20,8 @@ const variantNumber = ref('')
 const accessError = ref('')
 
 const questions = ref<any[]>([])
+
+const testEndTime = ref(0)
 
 const startTest = () => {
   if (inputCode.value !== '1611') {
@@ -31,10 +35,23 @@ const startTest = () => {
 
   questions.value = test.variants[variantNumber.value]
   answers.value = new Array(questions.value.length).fill(null)
+  
+  testEndTime.value = Date.now() + 1800 * 1000
+  saveProgress()
+  
   hasAccess.value = true
   
   // Start Timer
   startTimer()
+}
+
+const saveProgress = () => {
+  localStorage.setItem(STORAGE_KEY.value, JSON.stringify({
+    variantNumber: variantNumber.value,
+    endTime: testEndTime.value,
+    answers: answers.value,
+    currentQuestionIndex: currentQuestionIndex.value
+  }))
 }
 
 // Timer logic (30 mins = 1800 secs)
@@ -48,23 +65,111 @@ const formattedTime = computed(() => {
 })
 
 const startTimer = () => {
-  timerInterval = setInterval(() => {
-    if (timeLeft.value > 0) {
-      timeLeft.value--
-    } else {
-      clearInterval(timerInterval)
+  const updateTimer = () => {
+    const now = Date.now()
+    if (now >= testEndTime.value) {
+      timeLeft.value = 0
+      if (timerInterval) {
+        clearInterval(timerInterval)
+        timerInterval = null
+      }
       submitTest() // Auto-submit when time is up
+    } else {
+      timeLeft.value = Math.floor((testEndTime.value - now) / 1000)
     }
-  }, 1000)
+  }
+  
+  updateTimer()
+  timerInterval = setInterval(updateTimer, 1000)
+}
+
+const playWarningSound = () => {
+  try {
+    const audioEl = document.getElementById('warningAudio') as HTMLAudioElement | null;
+    if (audioEl) {
+      audioEl.currentTime = 0;
+      const playPromise = audioEl.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(e => console.error('Audio error', e));
+      }
+    } else {
+      // Fallback
+      const fallbackAudio = new Audio('/faaaa.mp3');
+      fallbackAudio.play().catch(e => console.error('Fallback Audio error', e));
+    }
+  } catch (e) {
+    console.error('Audio error', e);
+  }
+}
+
+const handleVisibilityChange = () => {
+  if (document.hidden && hasAccess.value) {
+    playWarningSound()
+  }
+}
+
+const handleBlur = () => {
+  if (hasAccess.value) {
+    playWarningSound()
+  }
+}
+
+onMounted(() => {
+  const savedStr = localStorage.getItem(STORAGE_KEY.value)
+  if (savedStr) {
+    try {
+      const saved = JSON.parse(savedStr)
+      if (saved.endTime && saved.endTime > Date.now()) {
+        variantNumber.value = saved.variantNumber
+        questions.value = test.variants[variantNumber.value]
+        answers.value = saved.answers || new Array(questions.value.length).fill(null)
+        currentQuestionIndex.value = saved.currentQuestionIndex || 0
+        testEndTime.value = saved.endTime
+        hasAccess.value = true
+        startTimer()
+      } else {
+        localStorage.removeItem(STORAGE_KEY.value)
+      }
+    } catch (e) {
+      localStorage.removeItem(STORAGE_KEY.value)
+    }
+  }
+
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('blur', handleBlur)
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (hasAccess.value) {
+    if (e.key === 'Alt' || e.key === 'Meta' || e.altKey || e.metaKey || (e.ctrlKey && e.key === 'd')) {
+      playWarningSound()
+    }
+  }
 }
 
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('blur', handleBlur)
+  window.removeEventListener('keydown', handleKeyDown)
 })
 
 // Question Logic
 const currentQuestionIndex = ref(0)
 const answers = ref<any[]>([])
+
+watch(answers, () => {
+  if (hasAccess.value && timerInterval) {
+    saveProgress()
+  }
+}, { deep: true })
+
+watch(currentQuestionIndex, () => {
+  if (hasAccess.value && timerInterval) {
+    saveProgress()
+  }
+})
 
 const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const isLastQuestion = computed(() => currentQuestionIndex.value === questions.value.length - 1)
@@ -101,7 +206,11 @@ interface TestResult {
 const sharedResult = useState<TestResult | null>('testResult', () => null)
 
 const submitTest = () => {
-  if (timerInterval) clearInterval(timerInterval)
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+  localStorage.removeItem(STORAGE_KEY.value)
   
   let correctCount = 0
   const detailedResults = questions.value.map((q, index) => {
@@ -147,9 +256,11 @@ const submitTest = () => {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <div>
+    <audio id="warningAudio" src="/faaaa.mp3" preload="auto"></audio>
     <!-- Access Gateway -->
-    <div v-if="!hasAccess" class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 sm:p-12 animate-fade-in max-w-lg mx-auto text-center">
+    <div v-if="!hasAccess" class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 sm:p-12 animate-fade-in max-w-lg mx-auto text-center">
       <h1 class="text-2xl font-bold text-slate-900 mb-2">{{ test.title }}</h1>
       <p class="text-slate-500 mb-8">Testni boshlash uchun variant raqamini va maxfiy kodni kiriting.</p>
       
@@ -168,15 +279,17 @@ const submitTest = () => {
       <button @click="startTest" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors shadow-sm">
         Testni Boshlash
       </button>
+      </div>
     </div>
 
     <!-- Test Interface -->
-    <div v-else>
-      <div class="mb-8 flex items-center justify-between animate-fade-in sticky top-20 bg-slate-50/90 backdrop-blur-md p-4 rounded-xl shadow-sm border border-slate-200 z-40">
-        <div>
-          <h1 class="text-xl font-bold text-slate-900">Variant {{ variantNumber }}</h1>
-          <p class="text-sm text-slate-500">{{ currentQuestionIndex + 1 }} / {{ questions.length }}</p>
-        </div>
+    <div v-else class="fixed inset-0 z-50 bg-slate-50 overflow-y-auto w-full h-full">
+      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 min-h-screen flex flex-col">
+        <div class="mb-8 flex items-center justify-between animate-fade-in sticky top-0 bg-slate-50/90 backdrop-blur-md p-4 rounded-xl shadow-sm border border-slate-200 z-40">
+          <div>
+            <h1 class="text-xl font-bold text-slate-900">Variant {{ variantNumber }}</h1>
+            <p class="text-sm text-slate-500">{{ currentQuestionIndex + 1 }} / {{ questions.length }}</p>
+          </div>
         <div class="text-right flex items-center gap-3">
           <div class="inline-flex items-center px-3 py-1.5 rounded-lg font-mono font-bold text-sm transition-colors" :class="timeLeft < 300 ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-primary-100 text-primary-700'">
             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -229,6 +342,7 @@ const submitTest = () => {
       
       <div v-if="isLastQuestion && !allAnswered" class="mt-4 text-center text-sm text-amber-600">
         Barcha savollarga javob bermadingiz. Shunday bo'lsada, yakunlashingiz mumkin.
+      </div>
       </div>
     </div>
   </div>
