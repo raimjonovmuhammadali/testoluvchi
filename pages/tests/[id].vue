@@ -20,7 +20,7 @@ const accessError = ref('')
 const questions = ref<any[]>([])
 
 const startTest = () => {
-  if (inputCode.value !== '1511') {
+  if (inputCode.value !== '1611') {
     accessError.value = "Noto'g'ri kod kiritildi!"
     return
   }

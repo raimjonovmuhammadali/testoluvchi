@@ -37,7 +37,7 @@ const inputCode = ref('')
 const accessError = ref('')
 
 const verifyCode = () => {
-  if (inputCode.value === '1511') {
+  if (inputCode.value === '1611') {
     showAnswers.value = true
   } else {
     accessError.value = "Noto'g'ri kod kiritildi!"
