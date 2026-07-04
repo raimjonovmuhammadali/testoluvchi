@@ -45,8 +45,15 @@ const startTest = () => {
   }
 
   const today = new Date().toISOString().split('T')[0]
-  if (localStorage.getItem('lastAttemptDate') === today) {
-    accessError.value = "Ko'p urinish. Bir kunda faqat 1 marta test ishlash mumkin!"
+  let dailyAttemptsStr = localStorage.getItem('dailyAttempts')
+  let dailyAttempts = dailyAttemptsStr ? JSON.parse(dailyAttemptsStr) : { date: '', count: 0 }
+  
+  if (dailyAttempts.date !== today) {
+    dailyAttempts = { date: today, count: 0 }
+  }
+
+  if (dailyAttempts.count >= 3) {
+    accessError.value = "Ko'p urinish. Bir kunda faqat 3 marta test ishlash mumkin!"
     return
   }
 
@@ -62,7 +69,8 @@ const startTest = () => {
     return
   }
 
-  localStorage.setItem('lastAttemptDate', today)
+  dailyAttempts.count++
+  localStorage.setItem('dailyAttempts', JSON.stringify(dailyAttempts))
   completed.push(variantNumber.value)
   localStorage.setItem(`completedVariants_${testId}`, JSON.stringify(completed))
   warningsCount.value = 0
@@ -126,7 +134,7 @@ const banUser = () => {
   }
   localStorage.removeItem(STORAGE_KEY.value)
   hasAccess.value = false
-  accessError.value = "Siz qoidalarni 3 marta buzganingiz uchun testdan chetlatildingiz!"
+  accessError.value = "Siz qoidalarni 6 marta buzganingiz uchun testdan chetlatildingiz!"
 }
 
 const playWarningSound = () => {
@@ -149,7 +157,7 @@ const playWarningSound = () => {
 
   warningsCount.value++
   saveProgress()
-  if (warningsCount.value >= 3) {
+  if (warningsCount.value >= 6) {
     banUser()
   }
 }
@@ -366,7 +374,7 @@ const submitTest = () => {
       <!-- Penalties -->
       <div class="fixed left-4 top-1/2 transform -translate-y-1/2 bg-white px-4 py-3 rounded-2xl shadow-xl border border-red-100 z-[60] flex flex-col items-center animate-fade-in">
         <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Jarimalar</span>
-        <span class="text-3xl font-black" :class="warningsCount > 0 ? 'text-red-500' : 'text-slate-800'">{{ warningsCount }}/3</span>
+        <span class="text-3xl font-black" :class="warningsCount > 0 ? 'text-red-500' : 'text-slate-800'">{{ warningsCount }}/6</span>
       </div>
 
       <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 min-h-screen flex flex-col">
