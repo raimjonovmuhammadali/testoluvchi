@@ -23,6 +23,7 @@ const accessError = ref('')
 const questions = ref<any[]>([])
 
 const testEndTime = ref(0)
+const warningsCount = ref(0)
 
 const startTest = () => {
   if (!userName.value.trim()) {
@@ -43,6 +44,29 @@ const startTest = () => {
     return
   }
 
+  const today = new Date().toISOString().split('T')[0]
+  if (localStorage.getItem('lastAttemptDate') === today) {
+    accessError.value = "Ko'p urinish. Bir kunda faqat 1 marta test ishlash mumkin!"
+    return
+  }
+
+  let completed = JSON.parse(localStorage.getItem(`completedVariants_${testId}`) || '[]')
+  const totalVariants = Object.keys(test.variants).length
+  if (completed.length >= totalVariants) {
+    completed = []
+    localStorage.setItem(`completedVariants_${testId}`, '[]')
+  }
+  
+  if (completed.includes(variantNumber.value)) {
+    accessError.value = "Siz bu variantni ishlagansiz. Boshqa variant tanlang."
+    return
+  }
+
+  localStorage.setItem('lastAttemptDate', today)
+  completed.push(variantNumber.value)
+  localStorage.setItem(`completedVariants_${testId}`, JSON.stringify(completed))
+  warningsCount.value = 0
+
   questions.value = test.variants[variantNumber.value]
   answers.value = new Array(questions.value.length).fill(null)
   
@@ -61,7 +85,8 @@ const saveProgress = () => {
     userName: userName.value,
     endTime: testEndTime.value,
     answers: answers.value,
-    currentQuestionIndex: currentQuestionIndex.value
+    currentQuestionIndex: currentQuestionIndex.value,
+    warningsCount: warningsCount.value
   }))
 }
 
@@ -94,6 +119,16 @@ const startTimer = () => {
   timerInterval = setInterval(updateTimer, 1000)
 }
 
+const banUser = () => {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+  localStorage.removeItem(STORAGE_KEY.value)
+  hasAccess.value = false
+  accessError.value = "Siz qoidalarni 3 marta buzganingiz uchun testdan chetlatildingiz!"
+}
+
 const playWarningSound = () => {
   try {
     const audioEl = document.getElementById('warningAudio') as HTMLAudioElement | null;
@@ -110,6 +145,12 @@ const playWarningSound = () => {
     }
   } catch (e) {
     console.error('Audio error', e);
+  }
+
+  warningsCount.value++
+  saveProgress()
+  if (warningsCount.value >= 3) {
+    banUser()
   }
 }
 
@@ -136,6 +177,7 @@ onMounted(() => {
         questions.value = test.variants[variantNumber.value]
         answers.value = saved.answers || new Array(questions.value.length).fill(null)
         currentQuestionIndex.value = saved.currentQuestionIndex || 0
+        warningsCount.value = saved.warningsCount || 0
         testEndTime.value = saved.endTime
         hasAccess.value = true
         startTimer()
@@ -321,6 +363,12 @@ const submitTest = () => {
 
     <!-- Test Interface -->
     <div v-else class="fixed inset-0 z-50 bg-slate-50 overflow-y-auto w-full h-full">
+      <!-- Penalties -->
+      <div class="fixed left-4 top-1/2 transform -translate-y-1/2 bg-white px-4 py-3 rounded-2xl shadow-xl border border-red-100 z-[60] flex flex-col items-center animate-fade-in">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Jarimalar</span>
+        <span class="text-3xl font-black" :class="warningsCount > 0 ? 'text-red-500' : 'text-slate-800'">{{ warningsCount }}/3</span>
+      </div>
+
       <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 min-h-screen flex flex-col">
         <div class="mb-8 flex items-center justify-between animate-fade-in sticky top-0 bg-slate-50/90 backdrop-blur-md p-4 rounded-xl shadow-sm border border-slate-200 z-40">
           <div>
