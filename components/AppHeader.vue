@@ -9,8 +9,9 @@
           </NuxtLink>
         </div>
         <nav class="hidden sm:ml-6 sm:flex sm:space-x-8">
-          <NuxtLink to="/" class="text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium transition-colors" activeClass="text-primary-600 font-semibold">Home</NuxtLink>
-          <NuxtLink to="/tests" class="text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium transition-colors" activeClass="text-primary-600 font-semibold">All Tests</NuxtLink>
+          <NuxtLink to="/" class="text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium transition-colors" activeClass="text-primary-600 font-semibold">Bosh sahifa</NuxtLink>
+          <NuxtLink to="/tests" class="text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium transition-colors" activeClass="text-primary-600 font-semibold">Barcha testlar</NuxtLink>
+          <NuxtLink to="/natijalar" class="text-slate-500 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium transition-colors" activeClass="text-primary-600 font-semibold">Natijalar</NuxtLink>
         </nav>
       </div>
     </div>

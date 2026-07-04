@@ -17,6 +17,7 @@ const STORAGE_KEY = computed(() => `test_progress_${testId}`)
 const hasAccess = ref(false)
 const inputCode = ref('')
 const variantNumber = ref('')
+const userName = ref('')
 const accessError = ref('')
 
 const questions = ref<any[]>([])
@@ -24,7 +25,16 @@ const questions = ref<any[]>([])
 const testEndTime = ref(0)
 
 const startTest = () => {
-  if (inputCode.value !== '1611') {
+  if (!userName.value.trim()) {
+    accessError.value = "Iltimos, ismingizni kiriting!"
+    return
+  }
+  const now = new Date()
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const expectedCode = `${hours}${minutes}`
+
+  if (inputCode.value !== expectedCode) {
     accessError.value = "Noto'g'ri kod kiritildi!"
     return
   }
@@ -48,6 +58,7 @@ const startTest = () => {
 const saveProgress = () => {
   localStorage.setItem(STORAGE_KEY.value, JSON.stringify({
     variantNumber: variantNumber.value,
+    userName: userName.value,
     endTime: testEndTime.value,
     answers: answers.value,
     currentQuestionIndex: currentQuestionIndex.value
@@ -121,6 +132,7 @@ onMounted(() => {
       const saved = JSON.parse(savedStr)
       if (saved.endTime && saved.endTime > Date.now()) {
         variantNumber.value = saved.variantNumber
+        userName.value = saved.userName || ''
         questions.value = test.variants[variantNumber.value]
         answers.value = saved.answers || new Array(questions.value.length).fill(null)
         currentQuestionIndex.value = saved.currentQuestionIndex || 0
@@ -142,7 +154,8 @@ onMounted(() => {
 
 const handleKeyDown = (e: KeyboardEvent) => {
   if (hasAccess.value) {
-    if (e.key === 'Alt' || e.key === 'Meta' || e.altKey || e.metaKey || (e.ctrlKey && e.key === 'd')) {
+    if (e.key === 'Alt' || e.key === 'Meta' || e.altKey || e.metaKey || (e.ctrlKey && e.key === 'd') || /^F\d+$/.test(e.key)) {
+      e.preventDefault()
       playWarningSound()
     }
   }
@@ -251,6 +264,26 @@ const submitTest = () => {
     details: detailedResults
   }
 
+  // Mahalliy tarixga saqlash
+  const testRecord = {
+    id: Date.now().toString(),
+    userName: userName.value,
+    testTitle: sharedResult.value.testTitle,
+    score: sharedResult.value.score,
+    total: sharedResult.value.total,
+    date: new Date().toISOString(),
+    timeTakenMinutes: Math.ceil((1800 - timeLeft.value) / 60),
+    details: sharedResult.value.details
+  }
+  
+  const historyStr = localStorage.getItem('allTestResults')
+  let history = []
+  if (historyStr) {
+    try { history = JSON.parse(historyStr) } catch(e){}
+  }
+  history.push(testRecord)
+  localStorage.setItem('allTestResults', JSON.stringify(history))
+
   router.push('/results')
 }
 </script>
@@ -266,12 +299,16 @@ const submitTest = () => {
       
       <div class="space-y-4 mb-8 text-left">
         <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Ismingiz</label>
+          <input type="text" autocomplete="off" v-model="userName" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-colors" placeholder="Ismingizni kiriting">
+        </div>
+        <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">Variant (1-5)</label>
-          <input type="number" min="1" max="5" v-model="variantNumber" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-colors" placeholder="Masalan: 1">
+          <input type="number" autocomplete="off" min="1" max="5" v-model="variantNumber" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-colors" placeholder="Masalan: 1">
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">Test Kodi</label>
-          <input type="password" v-model="inputCode" @keyup.enter="startTest" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-colors" placeholder="Kodni kiriting">
+          <input type="password" autocomplete="new-password" v-model="inputCode" @keyup.enter="startTest" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-colors" placeholder="Kodni kiriting">
         </div>
         <p v-if="accessError" class="text-red-500 text-sm mt-2 font-medium">{{ accessError }}</p>
       </div>

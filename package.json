@@ -16,5 +16,8 @@
     "vue": "latest",
     "vue-router": "latest",
     "vue-tsc": "^3.3.5"
+  },
+  "dependencies": {
+    "html2pdf.js": "^0.14.0"
   }
 }

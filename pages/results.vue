@@ -37,7 +37,12 @@ const inputCode = ref('')
 const accessError = ref('')
 
 const verifyCode = () => {
-  if (inputCode.value === '1611') {
+  const now = new Date()
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const expectedCode = `${hours}${minutes}`
+
+  if (inputCode.value === expectedCode) {
     showAnswers.value = true
   } else {
     accessError.value = "Noto'g'ri kod kiritildi!"
@@ -60,7 +65,7 @@ const verifyCode = () => {
         <p class="text-lg text-slate-500 mb-8 max-w-md">Javoblaringiz tizimga qabul qilindi. Natijani va xatolaringizni ko'rish uchun maxfiy kodni kiriting.</p>
         
         <div class="w-full max-w-sm space-y-4">
-          <input type="password" v-model="inputCode" @keyup.enter="verifyCode" placeholder="Maxfiy kod" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-colors text-center text-lg tracking-widest">
+          <input type="password" autocomplete="new-password" v-model="inputCode" @keyup.enter="verifyCode" placeholder="Maxfiy kod" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-colors text-center text-lg tracking-widest">
           <p v-if="accessError" class="text-red-500 text-sm font-medium">{{ accessError }}</p>
           <button @click="verifyCode" class="w-full flex items-center justify-center px-8 py-3.5 border border-transparent text-base font-bold rounded-xl text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors shadow-sm">
             Natijani Ko'rish
