@@ -113,38 +113,24 @@ const verifyCode = () => {
           
           <div class="space-y-6">
             <div v-for="(detail, index) in sharedResult.details" :key="index" 
-                 class="p-6 rounded-2xl border" 
-                 :class="detail.isCorrect ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'">
+                 class="p-6 rounded-2xl border bg-slate-50 border-slate-200">
               <div class="flex items-start">
                 <div class="flex-shrink-0 mt-0.5">
-                  <svg v-if="detail.isCorrect" class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                  <svg v-else class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-100 text-primary-700 text-sm font-bold">{{ index + 1 }}</span>
                 </div>
                 <div class="ml-4 flex-grow">
-                  <h3 class="text-base font-semibold text-slate-900 mb-3">{{ index + 1 }}. {{ detail.question }}</h3>
+                  <h3 class="text-base font-semibold text-slate-900 mb-3">{{ detail.question }}</h3>
                   <div class="space-y-2">
-                    <div class="flex items-center text-sm" :class="detail.isCorrect ? 'text-green-700' : 'text-slate-600'">
+                    <div class="flex items-center text-sm text-slate-700">
                       <span class="font-medium w-32 flex-shrink-0">Sizning javob:</span>
-                      <span v-if="detail.type === 'choice'">
+                      <span v-if="detail.type === 'choice'" class="font-semibold">
                         {{ (detail.userAnswer !== null && detail.userAnswer !== -1 && detail.options) ? detail.options[detail.userAnswer as number] : 'Belgilanmagan' }}
                       </span>
-                      <span v-else-if="detail.type === 'code'" class="font-mono bg-white/50 px-2 py-1 rounded break-all">
+                      <span v-else-if="detail.type === 'code'" class="font-mono bg-white/50 px-2 py-1 rounded break-all font-semibold">
                         {{ detail.userAnswer || 'Yozilmagan' }}
                       </span>
-                      <span v-else>
+                      <span v-else class="font-semibold">
                         {{ detail.userAnswer || 'Yozilmagan' }}
-                      </span>
-                    </div>
-                    <div v-if="!detail.isCorrect" class="flex items-center text-sm text-green-700">
-                      <span class="font-medium w-32 flex-shrink-0">To'g'ri javob:</span>
-                      <span v-if="detail.type === 'choice'">
-                        {{ detail.options ? detail.options[detail.correctAnswer as number] : '' }}
-                      </span>
-                      <span v-else-if="detail.type === 'code'" class="font-mono bg-white/50 px-2 py-1 rounded break-all">
-                        {{ detail.correctAnswer }}
-                      </span>
-                      <span v-else>
-                        {{ detail.correctAnswer }}
                       </span>
                     </div>
                   </div>

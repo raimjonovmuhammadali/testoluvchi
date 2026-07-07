@@ -184,16 +184,15 @@ const downloadPDF = async () => {
       <div>
         <h3 class="text-xl font-bold text-slate-900 mb-4 border-b pb-2">Savollar tahlili</h3>
         <div class="space-y-4">
-          <div v-for="(detail, index) in selectedRecord.details" :key="index" class="p-4 rounded-lg border" :class="detail.isCorrect ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'">
+          <div v-for="(detail, index) in selectedRecord.details" :key="index" class="p-4 rounded-lg border bg-slate-50 border-slate-200">
             <div class="flex gap-3">
               <div class="mt-0.5">
-                <span v-if="detail.isCorrect" class="text-green-500 font-bold">✓</span>
-                <span v-else class="text-red-500 font-bold">✗</span>
+                <span class="font-bold text-primary-600">{{ index + 1 }}.</span>
               </div>
               <div>
-                <p class="font-semibold text-slate-900 mb-2">{{ index + 1 }}. {{ detail.question }}</p>
+                <p class="font-semibold text-slate-900 mb-2">{{ detail.question }}</p>
                 <div class="text-sm space-y-1">
-                  <p :class="detail.isCorrect ? 'text-green-700' : 'text-slate-600'">
+                  <p class="text-slate-700">
                     <span class="font-medium">Sizning javobingiz:</span> 
                     {{ detail.type === 'choice' ? (detail.userAnswer !== null && detail.userAnswer !== -1 ? detail.options[detail.userAnswer] : 'Belgilanmagan') : (detail.userAnswer || 'Yozilmagan') }}
                   </p>
