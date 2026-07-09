@@ -1,10 +1,11 @@
 import { readBody } from 'h3'
-import { createClient } from '@vercel/kv'
+import { createClient } from 'redis'
 
-const kv = createClient({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN || ''
+const client = createClient({
+  url: process.env.REDIS_URL
 })
+
+client.on('error', (err) => console.error('Redis Client Error', err));
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -21,8 +22,12 @@ export default defineEventHandler(async (event) => {
   const completedKey = `test_${testId}_variant_${variantNumber}_user_${userNameLower}`
 
   try {
+    if (!client.isOpen) {
+      await client.connect()
+    }
+
     // Ushbu variantni ishlaganini saqlab qo'yish
-    await kv.set(completedKey, true)
+    await client.set(completedKey, 'true')
 
     return {
       success: true,

@@ -1,10 +1,11 @@
 import { readBody } from 'h3'
-import { createClient } from '@vercel/kv'
+import { createClient } from 'redis'
 
-const kv = createClient({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN || ''
+const client = createClient({
+  url: process.env.REDIS_URL
 })
+
+client.on('error', (err) => console.error('Redis Client Error', err));
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -21,9 +22,14 @@ export default defineEventHandler(async (event) => {
   const userNameLower = userName.toLowerCase().trim()
 
   try {
+    if (!client.isOpen) {
+      await client.connect()
+    }
+
     // Kunlik urinishlarni tekshirish. (1 kunda max 3 marta)
     const dailyKey = `daily_attempts_${today}_${userNameLower}`
-    const attempts: number = (await kv.get(dailyKey)) || 0
+    const attemptsStr = await client.get(dailyKey)
+    const attempts: number = attemptsStr ? parseInt(attemptsStr, 10) : 0
 
     if (attempts >= 3) {
       return {
@@ -34,7 +40,7 @@ export default defineEventHandler(async (event) => {
 
     // Aniq shu variantni ishlaganmi yo'qmi tekshirish
     const completedKey = `test_${testId}_variant_${variantNumber}_user_${userNameLower}`
-    const alreadyCompleted = await kv.get(completedKey)
+    const alreadyCompleted = await client.get(completedKey)
 
     if (alreadyCompleted) {
       return {
@@ -44,7 +50,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Ruxsat berish va kunlik urinishni bittaga oshirish
-    await kv.set(dailyKey, attempts + 1, { ex: 86400 }) // 24 soatga saqlash
+    await client.set(dailyKey, String(attempts + 1), { EX: 86400 }) // 24 soatga saqlash
 
     return {
       success: true,
