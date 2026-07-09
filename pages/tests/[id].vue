@@ -25,7 +25,7 @@ const questions = ref<any[]>([])
 const testEndTime = ref(0)
 const warningsCount = ref(0)
 
-const startTest = () => {
+const startTest = async () => {
   if (!userName.value.trim()) {
     accessError.value = "Iltimos, ismingizni kiriting!"
     return
@@ -44,35 +44,25 @@ const startTest = () => {
     return
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  let dailyAttemptsStr = localStorage.getItem('dailyAttempts')
-  let dailyAttempts = dailyAttemptsStr ? JSON.parse(dailyAttemptsStr) : { date: '', count: 0 }
-  
-  if (dailyAttempts.date !== today) {
-    dailyAttempts = { date: today, count: 0 }
-  }
+  try {
+    const res: any = await $fetch('/api/test-access', {
+      method: 'POST',
+      body: {
+        userName: userName.value,
+        testId: testId,
+        variantNumber: variantNumber.value
+      }
+    })
 
-  if (dailyAttempts.count >= 3) {
-    accessError.value = "Ko'p urinish. Bir kunda faqat 3 marta test ishlash mumkin!"
+    if (!res.success) {
+      accessError.value = res.message
+      return
+    }
+  } catch (e) {
+    accessError.value = "Server bilan bog'lanishda xatolik yuz berdi"
     return
   }
 
-  let completed = JSON.parse(localStorage.getItem(`completedVariants_${testId}`) || '[]')
-  const totalVariants = Object.keys(test.variants).length
-  if (completed.length >= totalVariants) {
-    completed = []
-    localStorage.setItem(`completedVariants_${testId}`, '[]')
-  }
-  
-  if (completed.includes(variantNumber.value)) {
-    accessError.value = "Siz bu variantni ishlagansiz. Boshqa variant tanlang."
-    return
-  }
-
-  dailyAttempts.count++
-  localStorage.setItem('dailyAttempts', JSON.stringify(dailyAttempts))
-  completed.push(variantNumber.value)
-  localStorage.setItem(`completedVariants_${testId}`, JSON.stringify(completed))
   warningsCount.value = 0
 
   questions.value = test.variants[variantNumber.value]
@@ -127,12 +117,22 @@ const startTimer = () => {
   timerInterval = setInterval(updateTimer, 1000)
 }
 
-const banUser = () => {
+const banUser = async () => {
   if (timerInterval) {
     clearInterval(timerInterval)
     timerInterval = null
   }
   localStorage.removeItem(STORAGE_KEY.value)
+  
+  try {
+    await $fetch('/api/test-finish', {
+      method: 'POST',
+      body: { userName: userName.value, testId, variantNumber: variantNumber.value }
+    })
+  } catch (e) {
+    console.error(e)
+  }
+
   hasAccess.value = false
   accessError.value = "Siz qoidalarni 6 marta buzganingiz uchun testdan chetlatildingiz!"
 }
@@ -268,12 +268,21 @@ interface TestResult {
 }
 const sharedResult = useState<TestResult | null>('testResult', () => null)
 
-const submitTest = () => {
+const submitTest = async () => {
   if (timerInterval) {
     clearInterval(timerInterval)
     timerInterval = null
   }
   localStorage.removeItem(STORAGE_KEY.value)
+  
+  try {
+    await $fetch('/api/test-finish', {
+      method: 'POST',
+      body: { userName: userName.value, testId, variantNumber: variantNumber.value }
+    })
+  } catch (e) {
+    console.error(e)
+  }
   
   let correctCount = 0
   const detailedResults = questions.value.map((q, index) => {
